@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CPRT vs Buy — Breakeven Calculator</title>
+<style>
+  :root{
+    --bg:#0A0E17;
+    --surface:#111827;
+    --surface2:#182035;
+    --surface3:#1F2A44;
+    --border:#26314A;
+    --text:#F3F5F9;
+    --text-dim:#8B96AB;
+    --text-faint:#5B6479;
+    --violet:#8B7CFF;
+    --violet-soft:rgba(139,124,255,0.14);
+    --mint:#25E0B8;
+    --mint-soft:rgba(37,224,184,0.12);
+    --amber:#FFB648;
+    --amber-soft:rgba(255,182,72,0.12);
+    --coral:#FF6B7A;
+    --coral-soft:rgba(255,107,122,0.12);
+    font-variant-numeric: tabular-nums;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    min-height:100%;
+    letter-spacing:-0.01em;
+  }
+  .wrap{max-width:1320px; margin:0 auto; padding:28px 20px 80px;}
+
+  /* Header */
+  .hero-header{
+    display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
+    gap:16px; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid var(--border);
+  }
+  .hero-header h1{
+    font-size:clamp(24px,3.2vw,34px); font-weight:800; letter-spacing:-0.03em; line-height:1.1;
+    background:linear-gradient(120deg,#F3F5F9 30%,var(--violet) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero-header p{color:var(--text-dim); font-size:14px; margin-top:6px; max-width:520px;}
+  .badge-pill{
+    display:inline-flex; align-items:center; gap:6px; background:var(--surface2);
+    border:1px solid var(--border); border-radius:100px; padding:6px 14px; font-size:12px;
+    color:var(--text-dim); white-space:nowrap;
+  }
+  .badge-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--mint);}
+
+  /* Layout */
+  .layout{display:grid; grid-template-columns:380px 1fr; gap:24px; align-items:start;}
+  @media (max-width:980px){ .layout{grid-template-columns:1fr;} }
+
+  /* Input panel */
+  .panel{
+    background:var(--surface); border:1px solid var(--border); border-radius:18px;
+    padding:20px; position:sticky; top:20px;
+  }
+  @media (max-width:980px){ .panel{position:static;} }
+
+  .tabs{
+    display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:18px;
+    scrollbar-width:none;
+  }
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{
+    flex:0 0 auto; background:transparent; border:1px solid var(--border); color:var(--text-dim);
+    padding:8px 14px; border-radius:100px; font-size:12.5px; font-weight:600; cursor:pointer;
+    transition:all .15s; white-space:nowrap;
+  }
+  .tab-btn.active{background:var(--violet); border-color:var(--violet); color:#fff;}
+  .tab-btn:not(.active):hover{border-color:var(--text-faint); color:var(--text);}
+
+  .tab-panel{display:none; animation:fadein .2s ease;}
+  .tab-panel.active{display:block;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  .field{margin-bottom:16px;}
+  .field label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:12.5px; font-weight:600; color:var(--text); margin-bottom:5px;
+  }
+  .field label .unit{font-size:11px; font-weight:500; color:var(--text-faint);}
+  .field .hint{font-size:11px; color:var(--text-faint); margin-top:5px; line-height:1.4;}
+  .input-row{display:flex; align-items:center; background:var(--surface2); border:1px solid var(--border);
+    border-radius:10px; overflow:hidden; transition:border-color .15s;}
+  .input-row:focus-within{border-color:var(--violet);}
+  .input-row .prefix{padding:0 0 0 12px; color:var(--text-faint); font-size:14px; font-weight:600;}
+  .input-row input{
+    flex:1; background:transparent; border:none; outline:none; color:var(--text);
+    font-size:14.5px; font-weight:600; padding:10px 12px; width:100%; font-family:inherit;
+    font-variant-numeric:tabular-nums;
+  }
+  .input-row input::-webkit-outer-spin-button, .input-row input::-webkit-inner-spin-button{opacity:0.4;}
+
+  .reset-btn{
+    width:100%; margin-top:6px; background:var(--surface2); border:1px solid var(--border);
+    color:var(--text-dim); padding:11px; border-radius:10px; font-size:13px; font-weight:600;
+    cursor:pointer; transition:all .15s;
+  }
+  .reset-btn:hover{border-color:var(--coral); color:var(--coral);}
+
+  /* Results */
+  .results{display:flex; flex-direction:column; gap:20px;}
+
+  .hero-card{
+    background:linear-gradient(135deg,var(--surface2) 0%, var(--surface) 100%);
+    border:1px solid var(--border); border-radius:20px; padding:28px;
+    position:relative; overflow:hidden;
+  }
+  .hero-card::before{
+    content:''; position:absolute; top:-60%; right:-15%; width:320px; height:320px;
+    background:radial-gradient(circle, var(--violet-soft) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .hero-label{font-size:13px; color:var(--text-dim); font-weight:600; margin-bottom:8px;}
+  .hero-value{
+    font-size:clamp(38px,6vw,56px); font-weight:800; letter-spacing:-0.03em; line-height:1;
+    color:var(--mint); display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+  }
+  .hero-value .per-test{font-size:16px; font-weight:600; color:var(--text-dim);}
+  .hero-sub{margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;}
+  .status-chip{
+    display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:100px;
+    font-size:12.5px; font-weight:600;
+  }
+  .status-chip.over{background:var(--coral-soft); color:var(--coral);}
+  .status-chip.under{background:var(--mint-soft); color:var(--mint);}
+  .status-chip.neutral{background:var(--surface3); color:var(--text-dim);}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr;} }
+
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px;}
+  .card-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  .card-title{font-size:13px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.04em;}
+  .card-title.f{color:var(--violet);}
+  .card-title.c{color:var(--mint);}
+  .card-npv{font-size:26px; font-weight:800; letter-spacing:-0.02em; margin-bottom:14px; font-family:inherit;}
+  .mini-row{display:flex; justify-content:space-between; font-size:12.5px; padding:7px 0; border-top:1px solid var(--border);}
+  .mini-row .l{color:var(--text-dim);}
+  .mini-row .v{font-weight:600;}
+
+  .premium-card{
+    background:linear-gradient(135deg, var(--amber-soft), transparent 70%);
+    border:1px solid var(--border); border-radius:16px; padding:20px;
+  }
+  .premium-card .card-title{color:var(--amber);}
+  .premium-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin:14px 0;}
+  .stat-block .stat-label{font-size:11.5px; color:var(--text-dim); margin-bottom:4px;}
+  .stat-block .stat-value{font-size:19px; font-weight:700; letter-spacing:-0.01em;}
+  .insight-line{
+    font-size:13px; color:var(--text); line-height:1.55; margin-top:12px; padding-top:14px;
+    border-top:1px solid var(--border);
+  }
+  .insight-line b{color:var(--amber);}
+
+  .callout{
+    background:var(--violet-soft); border:1px solid rgba(139,124,255,0.3); border-radius:14px;
+    padding:14px 16px; font-size:12.5px; color:var(--text); line-height:1.55;
+  }
+  .callout b{color:var(--violet);}
+
+  /* Chart */
+  .chart-legend{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px; font-size:12px; color:var(--text-dim);}
+  .chart-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .chart-legend i{width:10px; height:10px; border-radius:3px; display:inline-block;}
+  svg.chart{width:100%; height:auto; display:block;}
+  .axis-label{fill:var(--text-faint); font-size:10px; font-family:inherit;}
+
+  /* Tables */
+  .accordion{border:1px solid var(--border); border-radius:14px; overflow:hidden;}
+  .accordion + .accordion{margin-top:12px;}
+  .accordion-head{
+    display:flex; justify-content:space-between; align-items:center; padding:14px 18px;
+    background:var(--surface2); cursor:pointer; user-select:none;
+  }
+  .accordion-head span.t{font-size:13.5px; font-weight:700;}
+  .accordion-head .chev{transition:transform .2s; color:var(--text-dim); font-size:14px;}
+  .accordion.open .chev{transform:rotate(180deg);}
+  .accordion-body{max-height:0; overflow:hidden; transition:max-height .25s ease;}
+  .accordion.open .accordion-body{max-height:900px;}
+  .table-scroll{overflow-x:auto; padding:0 4px 14px;}
+  table{width:100%; border-collapse:collapse; font-size:12px; min-width:720px;}
+  thead th{
+    text-align:right; padding:10px 10px; color:var(--text-faint); font-weight:600; font-size:11px;
+    border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  thead th:first-child{text-align:left;}
+  tbody td{padding:8px 10px; text-align:right; border-bottom:1px solid var(--border); white-space:nowrap;}
+  tbody td:first-child{text-align:left; color:var(--text-dim); font-weight:600;}
+  tbody tr:last-child td{border-bottom:none; font-weight:700; background:var(--surface2);}
+
+  .assumptions{font-size:12px; color:var(--text-dim); line-height:1.7;}
+  .assumptions li{margin-bottom:4px; margin-left:18px;}
+
+  footer{text-align:center; color:var(--text-faint); font-size:11.5px; margin-top:36px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero-header">
+    <div>
+      <h1>CPRT vs Buy</h1>
+      <p>Find the exact CPRT rate where outsourcing costs the same as owning the equipment — then see what premium you're really paying for offloading capital risk.</p>
+    </div>
+    <span class="badge-pill"><span class="dot"></span>Live — updates as you type</span>
+  </div>
+
+  <div class="layout">
+
+    <!-- INPUT PANEL -->
+    <div class="panel">
+      <div class="tabs" id="tabs">
+        <button class="tab-btn active" data-tab="equip">Equipment</button>
+        <button class="tab-btn" data-tab="rev">Revenue</button>
+        <button class="tab-btn" data-tab="cost">Costs</button>
+        <button class="tab-btn" data-tab="loan">Loan</button>
+        <button class="tab-btn" data-tab="val">Valuation</button>
+      </div>
+
+      <!-- Equipment -->
+      <div class="tab-panel active" data-panel="equip">
+        <div class="field">
+          <label>Equipment cost <span class="unit">₹</span></label>
+          <div class="input-row"><span class="prefix">₹</span><input type="number" id="eqCost" value="10000000"></div>
+        </div>
+        <div class="field">
+          <label>Installation cost <span class="unit">₹</span></label>
+          <div class="input-row"><span class="prefix">₹</span><input type="number" id="installCost" value="500000"></div>
+        </div>
+        <div class="field">
+          <label>IT / integration cost <span class="unit">₹</span></label>
+          <div class="input-row"><span class="prefix">₹</span><input type="number" id="itCost" value="300000"></div>
+        </div>
+        <div class="field">
+          <label>Useful life <span class="unit">years</span></label>
+          <div class="input-row"><input type="number" id="usefulLife" value="7" min="1"></div>
+          <div class="hint">Used to auto-calculate straight-line depreciation.</div>
+        </div>
+        <div class="field">
+          <label>Salvage value at end of evaluation <span class="unit">₹</span></label>
+          <div class="input-row"><span class="prefix">₹</span><input type="number" id="salvageValue" value="500000"></div>
+          <div class="hint">Resale value the equipment could fetch. Set 0 if none.</div>
+        </div>
+      </div>
+
+      <!-- Revenue -->
+      <div class="tab-panel" data-panel="rev">
+        <div class="field">
+          <label>Price charged per test <span class="unit">₹</span></label>
+          <div class="input-row"><span class="prefix">₹</span><input type="number" id="pricePerTest" value="2500"></div>
+        </div>
+        <div class="field">
+          <label>Expected annual volume <span class="unit">tests/yr</span></label>
+          <div class="input-row"><input type="number" id="baseVolume" value="4000"></div>
+        </div>
+        <div class="field">
+          <label>Volume growth <span class="unit">%/yr</span></label>
+          <div class="input-row"><input type="number" id="volumeGrowth" value="5" step="0.5"></div>
+        </div>
+        <div class="field">
+          <label>Price escalation <span class="unit">%/yr</span></label>
+          <div class="input-row"><input type="number" id="priceEscalation" value="3" step="0.5"></div>
+        </div>
+        <div class="callout">Heads up: since patients pay the same price either way, revenue cancels out of the breakeven math. It's here so you can see full profitability — <b>volume is what actually moves your breakeven CPRT rate.</b></div>
+      </div>
+
+      <!-- Costs -->
+      <div class="tab-panel" data-panel="cost">
+        <div class="field">
+          <label>Operating cost — owned equipment <span class="unit">₹/yr</span></label>
+          <div class="input-row"><span class="prefix">₹</span><input type="number" id="opCostFinancing" value="1200000"></div>
+          <div class="hint">Maintenance, consumables, power, AMC etc. when you own the machine.</div>
+        </div>
+        <div class="field">
+          <label>Operating cost — CPRT model <span class="unit">₹/yr</span></label>
+          <div class="input-row"><span class="prefix">₹</span><input type="number" id="opCostCPRT" value="400000"></div>
+          <div class="hint">Usually lower — vendor bundles consumables/maintenance into the per-test rate.</div>
+        </div>
+        <div class="field">
+          <label>Cost inflation <span class="unit">%/yr</span></label>
+          <div class="input-row"><input type="number" id="costInflation" value="5" step="0.5"></div>
+        </div>
+        <div class="field">
+          <label>Quoted CPRT rate (being evaluated) <span class="unit">₹/test</span></label>
+          <div class="input-row"><span class="prefix">₹</span><input type="number" id="quotedCPRT" value="900"></div>
+        </div>
+        <div class="field">
+          <label>CPRT rate escalation <span class="unit">%/yr</span></label>
+          <div class="input-row"><input type="number" id="cprtEscalation" value="3" step="0.5"></div>
+        </div>
+      </div>
+
+      <!-- Loan -->
+      <div class="tab-panel" data-panel="loan">
+        <div class="field">
+          <label>% of capex debt-financed <span class="unit">%</span></label>
+          <div class="input-row"><input type="number" id="debtPercent" value="80" min="0" max="100"></div>
+          <div class="hint">Rest is funded upfront from company cash/equity.</div>
+        </div>
+        <div class="field">
+          <label>Loan tenor <span class="unit">years</span></label>
+          <div class="input-row"><input type="number" id="loanTenor" value="5" min="1"></div>
+        </div>
+        <div class="field">
+          <label>Loan interest rate <span class="unit">%</span></label>
+          <div class="input-row"><input type="number" id="interestRate" value="9" step="0.1"></div>
+          <div class="hint">Straight-line principal repayment; interest on reducing balance.</div>
+        </div>
+      </div>
+
+      <!-- Valuation -->
+      <div class="tab-panel" data-panel="val">
+        <div class="field">
+          <label>WACC / hurdle rate <span class="unit">%</span></label>
+          <div class="input-row"><input type="number" id="wacc" value="12" step="0.1"></div>
+        </div>
+        <div class="field">
+          <label>Tax rate <span class="unit">%</span></label>
+          <div class="input-row"><input type="number" id="taxRate" value="25" step="0.5"></div>
+        </div>
+        <div class="field">
+          <label>Evaluation period <span class="unit">years</span></label>
+          <div class="input-row"><input type="number" id="evalPeriod" value="7" min="1"></div>
+        </div>
+      </div>
+
+      <button class="reset-btn" onclick="resetDefaults()">Reset to defaults</button>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results">
+
+      <div class="hero-card">
+        <div class="hero-label">No loss – no profit CPRT rate</div>
+        <div class="hero-value"><span id="heroBreakeven">₹0</span><span class="per-test">per test, today's terms</span></div>
+        <div class="hero-sub">
+          <span class="status-chip neutral" id="statusChip">—</span>
+          <span class="badge-pill" id="npvMatchChip">NPVs equal at this rate</span>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-head"><span class="card-title f">Buy / finance model</span></div>
+          <div class="card-npv" id="npvFinancing">₹0</div>
+          <div class="mini-row"><span class="l">Upfront equity outflow</span><span class="v" id="equityOutflow">₹0</span></div>
+          <div class="mini-row"><span class="l">PV of operating cash flows</span><span class="v" id="pvCfFinancing">₹0</span></div>
+          <div class="mini-row"><span class="l">PV of after-tax salvage</span><span class="v" id="pvSalvage">₹0</span></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title c">CPRT model (quoted rate)</span></div>
+          <div class="card-npv" id="npvCPRT">₹0</div>
+          <div class="mini-row"><span class="l">Upfront outflow</span><span class="v">₹0</span></div>
+          <div class="mini-row"><span class="l">PV of operating cash flows</span><span class="v" id="pvCfCPRT">₹0</span></div>
+          <div class="mini-row"><span class="l">Effective annual rate</span><span class="v" id="effRate">₹0 /test</span></div>
+        </div>
+      </div>
+
+      <div class="premium-card">
+        <div class="card-head"><span class="card-title">Risk premium — what you're really paying</span></div>
+        <div class="premium-grid">
+          <div class="stat-block"><div class="stat-label">Quoted rate</div><div class="stat-value" id="pQuoted">₹0</div></div>
+          <div class="stat-block"><div class="stat-label">Breakeven rate</div><div class="stat-value" id="pBreakeven">₹0</div></div>
+          <div class="stat-block"><div class="stat-label">Premium / test (today)</div><div class="stat-value" id="pPerTest">₹0</div></div>
+          <div class="stat-block"><div class="stat-label">Annualized premium (PV-equivalent)</div><div class="stat-value" id="pAnnual">₹0</div></div>
+          <div class="stat-block"><div class="stat-label">Total premium over period (NPV)</div><div class="stat-value" id="pTotalNpv">₹0</div></div>
+          <div class="stat-block"><div class="stat-label">Markup over breakeven</div><div class="stat-value" id="pMarkup">0%</div></div>
+        </div>
+        <div class="insight-line" id="insightLine">Fill in your numbers to see the risk premium breakdown.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">Cumulative cash flow — buy vs CPRT</span></div>
+        <div class="chart-legend">
+          <span><i style="background:var(--violet)"></i>Buy / finance</span>
+          <span><i style="background:var(--amber)"></i>CPRT @ quoted rate</span>
+          <span><i style="background:var(--mint)"></i>CPRT @ breakeven rate</span>
+        </div>
+        <svg class="chart" id="chartSvg" viewBox="0 0 640 240" preserveAspectRatio="none"></svg>
+      </div>
+
+      <div class="accordion" id="accFinancing">
+        <div class="accordion-head" onclick="toggleAcc('accFinancing')">
+          <span class="t">Buy / finance model — full P&L waterfall</span><span class="chev">⌄</span>
+        </div>
+        <div class="accordion-body">
+          <div class="table-scroll">
+            <table id="tblFinancing"><thead></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion" id="accCPRT">
+        <div class="accordion-head" onclick="toggleAcc('accCPRT')">
+          <span class="t">CPRT model (quoted rate) — full P&L waterfall</span><span class="chev">⌄</span>
+        </div>
+        <div class="accordion-body">
+          <div class="table-scroll">
+            <table id="tblCPRT"><thead></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion" id="accAssume">
+        <div class="accordion-head" onclick="toggleAcc('accAssume')">
+          <span class="t">Modeling assumptions</span><span class="chev">⌄</span>
+        </div>
+        <div class="accordion-body">
+          <div style="padding:16px 18px;">
+            <ul class="assumptions">
+              <li>Depreciation is straight-line over useful life; stops once the asset is fully depreciated.</li>
+              <li>Loan principal is repaid in equal instalments over the loan tenor; interest is charged on the reducing balance.</li>
+              <li>Tax is applied directly to EBT each year, including as a shield on losses — this assumes the diagnostics unit's results are pooled with a profitable parent company (standard for evaluating a business unit).</li>
+              <li>Patient-facing price and volume are assumed identical whether the equipment is owned or CPRT-financed, so revenue nets out of the breakeven rate — only costs differentiate the two models.</li>
+              <li>Salvage value (if any) is realized at the end of the evaluation period and taxed on the gain over remaining book value.</li>
+              <li>The CPRT model carries no depreciation, debt, or upfront capex — the per-test rate is assumed to bundle the vendor's own cost recovery.</li>
+              <li>All cash flows are discounted at the WACC / hurdle rate you enter.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <footer>Built for internal financial evaluation. Figures are illustrative — verify against your organization's finance policy before using for procurement decisions.</footer>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+function num(id){ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? 0 : v; }
+function fmtINR(v, decimals){
+  decimals = decimals || 0;
+  const sign = v < 0 ? '-' : '';
+  return sign + '₹' + Math.abs(v).toLocaleString('en-IN', {maximumFractionDigits:decimals, minimumFractionDigits:decimals});
+}
+function fmtCompact(v){
+  const sign = v < 0 ? '-' : '';
+  const a = Math.abs(v);
+  if(a >= 1e7) return sign + '₹' + (a/1e7).toFixed(2) + ' Cr';
+  if(a >= 1e5) return sign + '₹' + (a/1e5).toFixed(2) + ' L';
+  if(a >= 1e3) return sign + '₹' + (a/1e3).toFixed(1) + 'k';
+  return sign + '₹' + a.toFixed(0);
+}
+function pct(v, d){ d = d===undefined?1:d; return v.toFixed(d) + '%'; }
+
+/* ---------- tabs ---------- */
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.tab-btn');
+  if(!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelector(`.tab-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+});
+
+function toggleAcc(id){
+  document.getElementById(id).classList.toggle('open');
+}
+
+/* ---------- inputs ---------- */
+function readInputs(){
+  return {
+    eqCost: num('eqCost'), installCost: num('installCost'), itCost: num('itCost'),
+    usefulLife: Math.max(1, num('usefulLife')), salvageValue: num('salvageValue'),
+    pricePerTest: num('pricePerTest'), baseVolume: num('baseVolume'),
+    volumeGrowth: num('volumeGrowth'), priceEscalation: num('priceEscalation'),
+    opCostFinancing: num('opCostFinancing'), opCostCPRT: num('opCostCPRT'),
+    costInflation: num('costInflation'), quotedCPRT: num('quotedCPRT'),
+    cprtEscalation: num('cprtEscalation'),
+    debtPercent: Math.min(100, Math.max(0, num('debtPercent'))), loanTenor: Math.max(1, num('loanTenor')),
+    interestRate: num('interestRate'),
+    wacc: num('wacc'), taxRate: num('taxRate'), evalPeriod: Math.max(1, Math.round(num('evalPeriod')))
+  };
+}
+
+/* ---------- core engine ---------- */
+function buildSeries(inp){
+  const N = inp.evalPeriod;
+  const totalCapex = inp.eqCost + inp.installCost + inp.itCost;
+  const annualDep = totalCapex / inp.usefulLife;
+  const loanAmount = totalCapex * inp.debtPercent/100;
+  const equityOutflow0 = totalCapex - loanAmount;
+  const annualPrincipal = loanAmount / inp.loanTenor;
+
+  const years = [];
+  for(let t=1;t<=N;t++){
+    const volume = inp.baseVolume * Math.pow(1+inp.volumeGrowth/100, t-1);
+    const price = inp.pricePerTest * Math.pow(1+inp.priceEscalation/100, t-1);
+    const revenue = volume * price;
+    const opCostF = inp.opCostFinancing * Math.pow(1+inp.costInflation/100, t-1);
+    const opCostC = inp.opCostCPRT * Math.pow(1+inp.costInflation/100, t-1);
+    const dep = (t <= inp.usefulLife) ? annualDep : 0;
+    const loanBalanceStart = (t <= inp.loanTenor) ? loanAmount * (1 - (t-1)/inp.loanTenor) : 0;
+    const interest = (t <= inp.loanTenor) ? loanBalanceStart * inp.interestRate/100 : 0;
+    const principal = (t <= inp.loanTenor) ? annualPrincipal : 0;
+    years.push({t, volume, price, revenue, opCostF, opCostC, dep, interest, principal});
+  }
+  return {years, totalCapex, annualDep, loanAmount, equityOutflow0, N};
+}
+
+function financingModel(inp, series){
+  const rows = [];
+  let pv = 0;
+  const df = [];
+  for(const y of series.years){
+    const ebitda = y.revenue - y.opCostF;
+    const ebit = ebitda - y.dep;
+    const ebt = ebit - y.interest;
+    const tax = ebt * inp.taxRate/100;
+    const netIncome = ebt - tax;
+    const fcf = netIncome + y.dep - y.principal;
+    const discount = 1/Math.pow(1+inp.wacc/100, y.t);
+    const pvCf = fcf * discount;
+    pv += pvCf;
+    df.push(discount);
+    rows.push({...y, ebitda, ebit, ebt, tax, netIncome, fcf, discount, pvCf});
+  }
+  // salvage
+  let afterTaxSalvage = 0, pvSalvage = 0;
+  if(inp.salvageValue > 0){
+    const depreciatedYears = Math.min(series.N, inp.usefulLife);
+    const bookValue = Math.max(0, series.totalCapex - series.annualDep * depreciatedYears);
+    const gain = inp.salvageValue - bookValue;
+    afterTaxSalvage = inp.salvageValue - Math.max(gain,0)*inp.taxRate/100;
+    pvSalvage = afterTaxSalvage / Math.pow(1+inp.wacc/100, series.N);
+  }
+  const npv = -series.equityOutflow0 + pv + pvSalvage;
+  return {rows, pv, pvSalvage, npv, equityOutflow0: series.equityOutflow0};
+}
+
+function cprtModel(inp, series, rate, escalation){
+  escalation = escalation===undefined ? inp.cprtEscalation : escalation;
+  const rows = [];
+  let pv = 0;
+  for(const y of series.years){
+    const cprtRateY = rate * Math.pow(1+escalation/100, y.t-1);
+    const cprtCost = cprtRateY * y.volume;
+    const ebitda = y.revenue - cprtCost - y.opCostC;
+    const ebit = ebitda;
+    const ebt = ebit;
+    const tax = ebt * inp.taxRate/100;
+    const netIncome = ebt - tax;
+    const fcf = netIncome;
+    const discount = 1/Math.pow(1+inp.wacc/100, y.t);
+    const pvCf = fcf * discount;
+    pv += pvCf;
+    rows.push({...y, cprtRateY, cprtCost, ebitda, ebit, ebt, tax, netIncome, fcf, discount, pvCf});
+  }
+  return {rows, pv, npv: pv};
+}
+
+function findBreakeven(inp, series, targetNpv){
+  let low = 0, high = Math.max(inp.pricePerTest, inp.quotedCPRT, 1000) * 4;
+  for(let i=0;i<80;i++){
+    const mid = (low+high)/2;
+    const res = cprtModel(inp, series, mid);
+    if(res.npv > targetNpv){ low = mid; } else { high = mid; }
+  }
+  return (low+high)/2;
+}
+
+/* ---------- rendering ---------- */
+function renderChart(finRows, cprtQRows, cprtBRows, equityOutflow0){
+  const svg = document.getElementById('chartSvg');
+  const W = 640, H = 240, padL = 46, padR = 14, padT = 14, padB = 24;
+  const N = finRows.length;
+
+  function cumulative(rows, startNeg){
+    let c = -startNeg; const arr = [c];
+    for(const r of rows){ c += r.pvCf; arr.push(c); }
+    return arr;
+  }
+  const sFin = cumulative(finRows, equityOutflow0);
+  const sQ = cumulative(cprtQRows, 0);
+  const sB = cumulative(cprtBRows, 0);
+
+  const allVals = [...sFin, ...sQ, ...sB];
+  const minV = Math.min(...allVals, 0), maxV = Math.max(...allVals, 0);
+  const range = (maxV - minV) || 1;
+
+  const x = i => padL + (i/(N)) * (W-padL-padR);
+  const y = v => padT + (1 - (v-minV)/range) * (H-padT-padB);
+
+  function path(arr, color){
+    let d = arr.map((v,i)=> (i===0?'M':'L') + x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ');
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+
+  const zeroY = y(0);
+  let svgContent = `<line x1="${padL}" y1="${zeroY}" x2="${W-padR}" y2="${zeroY}" stroke="#26314A" stroke-width="1" stroke-dasharray="3,3"/>`;
+  svgContent += path(sFin, 'var(--violet)'.includes('var')? '#8B7CFF':'#8B7CFF');
+  svgContent += path(sQ, '#FFB648');
+  svgContent += path(sB, '#25E0B8');
+
+  // axis labels
+  svgContent += `<text class="axis-label" x="${padL}" y="${H-6}">Yr 0</text>`;
+  svgContent += `<text class="axis-label" x="${W-padR}" y="${H-6}" text-anchor="end">Yr ${N}</text>`;
+  svgContent += `<text class="axis-label" x="4" y="${y(maxV)+4}">${fmtCompact(maxV)}</text>`;
+  svgContent += `<text class="axis-label" x="4" y="${y(minV)+4}">${fmtCompact(minV)}</text>`;
+
+  svg.innerHTML = svgContent;
+}
+
+function renderTable(tableEl, rows, type){
+  const thead = tableEl.querySelector('thead');
+  const tbody = tableEl.querySelector('tbody');
+  let headers, keys;
+  if(type === 'financing'){
+    headers = ['Year','Revenue','Op cost','Depreciation','EBIT','Interest','EBT','Tax','Net income','Free cash flow','PV of FCF'];
+    keys = ['t','revenue','opCostF','dep','ebit','interest','ebt','tax','netIncome','fcf','pvCf'];
+  } else {
+    headers = ['Year','Revenue','CPRT cost','Op cost','EBIT','EBT','Tax','Net income','Free cash flow','PV of FCF'];
+    keys = ['t','revenue','cprtCost','opCostC','ebit','ebt','tax','netIncome','fcf','pvCf'];
+  }
+  thead.innerHTML = '<tr>' + headers.map(h=>`<th>${h}</th>`).join('') + '</tr>';
+  let totalFcf = 0, totalPv = 0;
+  let body = '';
+  for(const r of rows){
+    body += '<tr>' + keys.map(k=>{
+      if(k==='t') return `<td>${r[k]}</td>`;
+      return `<td>${fmtINR(r[k])}</td>`;
+    }).join('') + '</tr>';
+    totalFcf += r.fcf; totalPv += r.pvCf;
+  }
+  // total row
+  body += '<tr><td>Total</td>' + keys.slice(1).map(k=>{
+    if(k==='fcf') return `<td>${fmtINR(totalFcf)}</td>`;
+    if(k==='pvCf') return `<td>${fmtINR(totalPv)}</td>`;
+    return '<td>—</td>';
+  }).join('') + '</tr>';
+  tbody.innerHTML = body;
+}
+
+/* ---------- main recalc ---------- */
+function recalc(){
+  const inp = readInputs();
+  const series = buildSeries(inp);
+  const fin = financingModel(inp, series);
+  const cprtQ = cprtModel(inp, series, inp.quotedCPRT);
+  const breakevenRate = findBreakeven(inp, series, fin.npv);
+  const cprtB = cprtModel(inp, series, breakevenRate);
+
+  // Hero
+  document.getElementById('heroBreakeven').textContent = fmtINR(breakevenRate, 2);
+  const diff = inp.quotedCPRT - breakevenRate;
+  const chip = document.getElementById('statusChip');
+  if(Math.abs(diff) < 0.5){
+    chip.className = 'status-chip neutral'; chip.textContent = 'Quoted rate ≈ breakeven';
+  } else if(diff > 0){
+    chip.className = 'status-chip over'; chip.textContent = `▲ Quoted is ${fmtINR(diff,2)} above breakeven`;
+  } else {
+    chip.className = 'status-chip under'; chip.textContent = `▼ Quoted is ${fmtINR(-diff,2)} below breakeven`;
+  }
+
+  // Comparison cards
+  document.getElementById('npvFinancing').textContent = fmtCompact(fin.npv);
+  document.getElementById('npvFinancing').style.color = fin.npv>=0 ? '#25E0B8' : '#FF6B7A';
+  document.getElementById('equityOutflow').textContent = fmtINR(fin.equityOutflow0);
+  document.getElementById('pvCfFinancing').textContent = fmtINR(fin.pv);
+  document.getElementById('pvSalvage').textContent = fmtINR(fin.pvSalvage);
+
+  document.getElementById('npvCPRT').textContent = fmtCompact(cprtQ.npv);
+  document.getElementById('npvCPRT').style.color = cprtQ.npv>=0 ? '#25E0B8' : '#FF6B7A';
+  document.getElementById('pvCfCPRT').textContent = fmtINR(cprtQ.pv);
+  document.getElementById('effRate').textContent = fmtINR(inp.quotedCPRT,2) + ' /test';
+
+  // Premium
+  const annuityFactor = (()=>{ let s=0; for(let t=1;t<=inp.evalPeriod;t++) s += 1/Math.pow(1+inp.wacc/100,t); return s; })();
+  const totalPremiumNpv = fin.npv - cprtQ.npv;
+  const annualizedPremium = totalPremiumNpv / annuityFactor;
+  const avgVolume = series.years.reduce((a,y)=>a+y.volume,0)/series.years.length;
+  const markup = breakevenRate !== 0 ? (diff/breakevenRate*100) : 0;
+
+  document.getElementById('pQuoted').textContent = fmtINR(inp.quotedCPRT,2);
+  document.getElementById('pBreakeven').textContent = fmtINR(breakevenRate,2);
+  document.getElementById('pPerTest').textContent = fmtINR(diff,2);
+  document.getElementById('pAnnual').textContent = fmtCompact(annualizedPremium);
+  document.getElementById('pTotalNpv').textContent = fmtCompact(totalPremiumNpv);
+  document.getElementById('pMarkup').textContent = pct(markup,1);
+
+  const insight = document.getElementById('insightLine');
+  if(diff > 0.5){
+    insight.innerHTML = `You're paying <b>${fmtCompact(annualizedPremium)}/yr</b> (≈${pct(markup,1)} above breakeven) to avoid the equipment's capital risk, debt burden, and obsolescence exposure. Over ${inp.evalPeriod} years that's a total NPV cost of <b>${fmtCompact(totalPremiumNpv)}</b> versus owning it outright.`;
+  } else if(diff < -0.5){
+    insight.innerHTML = `This CPRT quote is actually <b>cheaper</b> than owning the equipment outright — it beats breakeven by ${fmtINR(-diff,2)}/test. Worth double-checking the vendor's terms; this is an unusually good deal.`;
+  } else {
+    insight.innerHTML = `The quoted rate sits almost exactly at breakeven — you'd be economically indifferent between owning and outsourcing.`;
+  }
+
+  // Chart
+  renderChart(fin.rows, cprtQ.rows, cprtB.rows, fin.equityOutflow0);
+
+  // Tables
+  renderTable(document.getElementById('tblFinancing'), fin.rows, 'financing');
+  renderTable(document.getElementById('tblCPRT'), cprtQ.rows, 'cprt');
+}
+
+function resetDefaults(){
+  const defaults = {
+    eqCost:10000000, installCost:500000, itCost:300000, usefulLife:7, salvageValue:500000,
+    pricePerTest:2500, baseVolume:4000, volumeGrowth:5, priceEscalation:3,
+    opCostFinancing:1200000, opCostCPRT:400000, costInflation:5, quotedCPRT:900, cprtEscalation:3,
+    debtPercent:80, loanTenor:5, interestRate:9,
+    wacc:12, taxRate:25, evalPeriod:7
+  };
+  for(const k in defaults){ document.getElementById(k).value = defaults[k]; }
+  recalc();
+}
+
+/* ---------- init ---------- */
+document.querySelectorAll('input').forEach(el=>{
+  el.addEventListener('input', recalc);
+});
+recalc();
+</script>
+</body>
+</html>
